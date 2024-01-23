@@ -11,6 +11,7 @@ const port = process.env.port || 3000;
 var bodyParser = require('body-parser');
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 async function msgeSendApi(req, res) {
   try {

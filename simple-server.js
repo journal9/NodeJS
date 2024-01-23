@@ -6,6 +6,7 @@ const port = process.env.port || 3000;
 async function fetchApi(req, res) {
   try {
     const apiRes = await axios.get(`https://reqres.in/api/users?delay=3`);
+    console.log(req.body)
     if (apiRes.data) {
       console.log("received");
     } else {

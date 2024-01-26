@@ -1,29 +1,53 @@
-const cookieParser = require("cookie-parser");
 const express = require("express");
 const session = require("express-session");
-const RedisStore = require('connect-redis').default;
+const bodyParser = require("body-parser");
+const redis = require("redis");
 const app = express();
-const port = process.env.port || 3000;
-const { createClient } = require("redis");
 
-const redisClient = createClient({
-    host: 'localhost',
-    port: 6379
-})
+const redisStore = require("connect-redis")(session);
+const PORT = 3000;
+const redisClient = redis.createClient({ legacyMode: true });
 
-app.use(cookieParser());
+redisClient
+  .connect()
+  .then(() => {
+    console.log("Connected to Redis");
+  })
+  .catch((err) => {
+    console.log(err.message);
+  });
 
-app.use(session({
-    store: new RedisStore({ client: redisClient }),
-    secret: 'your_secret_key',
+redisClient.on("error", function (err) {
+  console.log("Could not establish a connection with redis. " + err);
+});
+
+redisClient.on("connect", function (err) {
+  console.log("Connected to redis successfully");
+});
+
+const sessionStore = new redisStore({ client: redisClient });
+
+app.use(
+  bodyParser.urlencoded({
+    extended: true,
+  })
+);
+
+app.use(bodyParser.json());
+
+app.use(
+  session({
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    store: sessionStore,
+    secret: "our_secret",
     cookie: {
-        secure: false, // if true only transmit cookie over https
-        httpOnly: false, // if true prevent client side JS from reading the cookie 
-        maxAge: 1000 * 15 // session max age in miliseconds
-    }
-  }));
+      maxAge: 1000 * 10,
+      sameSite: true,
+      secure: false,
+    },
+  })
+);
 
 function welcomePage(req, res) {
   if (req.session.visited) {
@@ -47,30 +71,30 @@ function dashboardPage(req, res) {
 
 function loginPage(req, res) {
   if (req.session.isLoggedIn) {
-    res.redirect("/dashboard")
+    res.redirect("/dashboard");
   } else {
-    req.session.isLoggedIn = true
+    req.session.isLoggedIn = true;
     res.send({ message: "successfully logged in user" });
   }
 }
 
 function logoutPage(req, res) {
-    if (req.session.isLoggedIn) {
-      req.session.isLoggedIn = false
-      res.redirect('/')
-    } else {
-      res.send({ message: "already logged out" });
-    }
+  if (req.session.isLoggedIn) {
+    req.session.isLoggedIn = false;
+    res.redirect("/");
+  } else {
+    res.send({ message: "already logged out" });
   }
+}
 
-  function leavePage(req, res) {
-    req.session.destroy(err => {
-        if (err) {
-            return console.log(err);
-        }
-        res.redirect("/")
-    });
-  }
+function leavePage(req, res) {
+  req.session.destroy((err) => {
+    if (err) {
+      return console.log(err);
+    }
+    res.redirect("/");
+  });
+}
 
 app.get("/", welcomePage);
 app.get("/login", loginPage);
@@ -78,7 +102,6 @@ app.get("/dashboard", dashboardPage);
 app.get("/logout", logoutPage);
 app.get("/exit", leavePage);
 
-
-app.listen(port, () => {
-  console.log(`server started at port ${port}`);
+app.listen(PORT, () => {
+  console.log(`server started at port ${PORT}`);
 });

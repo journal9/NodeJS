@@ -2,8 +2,6 @@
 // const redis = new Redis();
 
 // redis.publish('msges',"hello there")
-
-const { default: axios } = require("axios");
 const express = require("express");
 const Redis = require("ioredis");
 const redis = new Redis();

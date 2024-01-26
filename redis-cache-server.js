@@ -16,7 +16,7 @@ async function fetchApi(req,res) {
         console.log("not received");
       }
       let resData = apiRes.data
-      await redis.set('cachedData', JSON.stringify(resData), 'EX', 60);
+      await redis.set('cachedData', JSON.stringify(resData), 'EX', 60);//seconds
       res.send({ data: resData });
     } catch (error) {
       console.log(error);
